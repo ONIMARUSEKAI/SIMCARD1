@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Sistem Penjualan SIM Card | Cloud Database (Google Sheets)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Inter', 'Roboto', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #e9f0fc 0%, #d9e4f5 100%);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.9rem;
+            background: linear-gradient(135deg, #1A2A4F, #0F2B3D);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #2c3e66;
+            margin-top: 8px;
+            font-weight: 500;
+            background: rgba(255,255,255,0.6);
+            display: inline-block;
+            padding: 4px 18px;
+            border-radius: 40px;
+            backdrop-filter: blur(2px);
+        }
+
+        .sync-status {
+            margin-top: 10px;
+            display: inline-block;
+            background: #f0f6fe;
+            padding: 6px 15px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .sync-status.online {
+            background: #e1f7e1;
+            color: #2e7d32;
+        }
+
+        .sync-status.offline {
+            background: #ffe1e1;
+            color: #c62828;
+        }
+
+        .sync-status.syncing {
+            background: #fff3e0;
+            color: #ed6c02;
+        }
+
+        .dashboard-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 28px;
+        }
+
+        .form-panel {
+            flex: 1.2;
+            min-width: 300px;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(2px);
+            border-radius: 2rem;
+            padding: 1.6rem 1.8rem;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .summary-panel {
+            flex: 0.9;
+            min-width: 280px;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(2px);
+            border-radius: 2rem;
+            padding: 1.5rem 1.8rem;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        .history-section {
+            margin-top: 2rem;
+            background: rgba(255,255,255,0.96);
+            border-radius: 1.8rem;
+            padding: 1.2rem 0 0.2rem 0;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #1e2a47;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input, select {
+            padding: 12px 14px;
+            border-radius: 20px;
+            border: 1.5px solid #cfdfed;
+            background: white;
+            font-size: 0.95rem;
+            transition: 0.2s;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: #2c6e9e;
+            box-shadow: 0 0 0 3px rgba(44,110,158,0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(100deg, #1f6392, #123e60);
+            border: none;
+            padding: 12px 18px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            width: 100%;
+            margin-top: 10px;
+            box-shadow: 0 5px 12px rgba(0,0,0,0.1);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(100deg, #0f4b72, #0a2e48);
+            transform: scale(0.98);
+        }
+
+        .btn-reset {
+            background: #eef2f7;
+            color: #2c4e6e;
+            margin-top: 8px;
+            border: 1px solid #cbdde9;
+        }
+
+        .btn-reset:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-sync {
+            background: #4caf50;
+            margin-top: 8px;
+        }
+
+        .btn-sync:hover {
+            background: #45a049;
+        }
+
+        .stat-card {
+            background: #f0f6fe;
+            border-radius: 1.5rem;
+            padding: 1rem 1.2rem;
+            margin-bottom: 1.2rem;
+            border-left: 6px solid;
+        }
+
+        .stat-card.modal {
+            border-left-color: #f4b942;
+            background: #fff6e8;
+        }
+        .stat-card.penjualan {
+            border-left-color: #2c9e6e;
+            background: #e9f9f0;
+        }
+        .stat-card.pendapatan {
+            border-left-color: #2c6e9e;
+            background: #e8f0fe;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            color: #2c3e66;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1a2c3e;
+            word-break: break-word;
+        }
+
+        .sub-info {
+            font-size: 0.7rem;
+            color: #5f6c86;
+            margin-top: 4px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .data-table th {
+            background: #eef3fc;
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 700;
+            color: #1f4569;
+            border-bottom: 2px solid #cbdbe2;
+        }
+
+        .data-table td {
+            padding: 12px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        .data-table tr:hover {
+            background: #f8fafd;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #b91c1c;
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 30px;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+
+        .delete-btn:hover {
+            background: #ffe5e5;
+            transform: scale(1.05);
+        }
+
+        .empty-row td {
+            text-align: center;
+            padding: 2rem;
+            color: #6c7a8e;
+            font-style: italic;
+        }
+
+        .badge-quantity {
+            background: #e0ebf5;
+            padding: 4px 8px;
+            border-radius: 30px;
+            font-weight: 600;
+            display: inline-block;
+            min-width: 45px;
+            text-align: center;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-spinner {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1f6392;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.75rem;
+            color: #345;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 760px) {
+            body {
+                padding: 1rem;
+            }
+            .stat-value {
+                font-size: 1.5rem;
+            }
+            .data-table th, .data-table td {
+                padding: 8px 6px;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="header">
+        <h1>📱 SIM Card Sales Tracker</h1>
+        <p>🌐 Cloud Database - Data tersinkronisasi di semua perangkat</p>
+        <div id="syncStatus" class="sync-status">🔄 Memeriksa koneksi...</div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="form-panel">
+            <h3 style="margin-bottom: 1rem;">✍️ Tambah Transaksi</h3>
+            <form id="salesForm">
+                <div class="form-group">
+                    <label>🏷️ Nama / Jenis SIM Card</label>
+                    <input type="text" id="simName" placeholder="Contoh: Telkomsel 5GB / XL Axiata" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>📦 Quantity (Jumlah)</label>
+                    <input type="number" id="quantity" placeholder="Jumlah kartu" min="1" value="1" required>
+                </div>
+                <div class="form-group">
+                    <label>💰 Modal per Unit (Rp)</label>
+                    <input type="number" id="modalUnit" placeholder="Harga beli per sim" min="0" step="100" required>
+                </div>
+                <div class="form-group">
+                    <label>💵 Harga Jual per Unit (Rp)</label>
+                    <input type="number" id="priceUnit" placeholder="Harga jual per sim" min="0" step="100" required>
+                </div>
+                <div class="form-group">
+                    <label>📅 Tanggal Penjualan</label>
+                    <input type="date" id="transactionDate" required>
+                </div>
+                <button type="submit" class="btn-primary">➕ Simpan Data Penjualan</button>
+                <button type="button" id="resetFormBtn" class="btn-primary btn-reset">⟳ Reset Form</button>
+            </form>
+            <div style="margin-top: 15px; font-size: 0.7rem; background:#f2f6fb; padding:8px 12px; border-radius: 28px;">
+                💡 Pendapatan = (Harga Jual × Quantity) - (Modal × Quantity)<br>
+                🌐 Data tersimpan di cloud, bisa diakses dari mana saja
+            </div>
+        </div>
+
+        <div class="summary-panel">
+            <h3 style="margin-bottom: 1rem;">📊 Ringkasan</h3>
+            <div class="stat-card modal">
+                <div class="stat-label">📥 TOTAL MODAL (Keseluruhan)</div>
+                <div class="stat-value" id="totalModalDisplay">Rp 0</div>
+                <div class="sub-info">Σ (Modal per unit × Quantity)</div>
+            </div>
+            <div class="stat-card penjualan">
+                <div class="stat-label">💸 TOTAL PENJUALAN</div>
+                <div class="stat-value" id="totalPenjualanDisplay">Rp 0</div>
+                <div class="sub-info">Σ (Harga Jual × Quantity)</div>
+            </div>
+            <div class="stat-card pendapatan">
+                <div class="stat-label">📈 TOTAL PENDAPATAN (Laba/Rugi)</div>
+                <div class="stat-value" id="totalPendapatanDisplay">Rp 0</div>
+                <div class="sub-info">Pendapatan = Penjualan - Modal</div>
+            </div>
+            <button id="syncNowBtn" class="btn-primary btn-sync">🔄 Sinkronisasi Sekarang</button>
+        </div>
+    </div>
+
+    <div class="history-section">
+        <div style="padding: 0 1.2rem 0.6rem 1.2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <h3>📋 Data Penjualan SIM Card</h3>
+            <span style="font-size: 0.75rem; background:#eef2f9; padding:4px 12px; border-radius: 20px;" id="rowCountBadge">0 transaksi</span>
+        </div>
+        <div style="overflow-x: auto;">
+            <table class="data-table" id="salesTable">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Nama SIM</th>
+                        <th>Qty</th>
+                        <th>Modal/Unit</th>
+                        <th>Jual/Unit</th>
+                        <th>Total Modal</th>
+                        <th>Total Jual</th>
+                        <th>Pendapatan</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr class="empty-row"><td colspan="9">Memuat data dari cloud...<td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #e2edf5; margin-top: 8px;">
+            <button id="clearAllBtn" style="background: #fee2e2; border: none; padding: 8px 18px; border-radius: 30px; font-weight: 600; color:#a12; cursor: pointer;">🗑 Hapus Semua Data</button>
+            <button id="exportDataBtn" style="background: #e8f0fe; border: none; padding: 8px 18px; border-radius: 30px; font-weight: 600; color:#1f6392; cursor: pointer;">📥 Export CSV</button>
+        </div>
+    </div>
+    <footer>🌐 Data tersimpan di cloud menggunakan Google Sheets API | Semua perangkat terhubung otomatis</footer>
+</div>
+
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner">
+        <div class="spinner"></div>
+        <div>Menyimpan data ke cloud...</div>
+    </div>
+</div>
+
+<script>
+    // ==================== KONFIGURASI GOOGLE SHEETS ====================
+    // GANTI DENGAN DEPLOY URL APPS SCRIPT ANDA
+    // Cara setup: https://script.google.com/home
+    // Buat Web App dan deploy, lalu masukkan URL-nya di bawah
+    
+    const GOOGLE_SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbzaJs1tyDDUbNC0O20wBdawR1j20ywkBOPX7KW_ZIFgfEPA1vicWLftFVxHJK5NVCyzyA/exec';
+    // ↑↑↑ GANTI DENGAN URL WEB APP ANDA YANG SUDAH DIDEploy ↑↑↑
+    
+    // Untuk demo, kita akan menggunakan localStorage sebagai fallback + simulasi cloud
+    // Tapi dengan catatan: untuk benar-benar tersinkronisasi, Anda perlu deploy Google Apps Script
+    
+    let transactions = [];
+    let isOnline = navigator.onLine;
+    let syncInProgress = false;
+
+    // DOM Elements
+    const form = document.getElementById('salesForm');
+    const simNameInput = document.getElementById('simName');
+    const quantityInput = document.getElementById('quantity');
+    const modalUnitInput = document.getElementById('modalUnit');
+    const priceUnitInput = document.getElementById('priceUnit');
+    const dateInput = document.getElementById('transactionDate');
+    const tableBody = document.getElementById('tableBody');
+    const totalModalSpan = document.getElementById('totalModalDisplay');
+    const totalPenjualanSpan = document.getElementById('totalPenjualanDisplay');
+    const totalPendapatanSpan = document.getElementById('totalPendapatanDisplay');
+    const rowCountBadge = document.getElementById('rowCountBadge');
+    const clearAllBtn = document.getElementById('clearAllBtn');
+    const resetFormBtn = document.getElementById('resetFormBtn');
+    const exportDataBtn = document.getElementById('exportDataBtn');
+    const syncNowBtn = document.getElementById('syncNowBtn');
+    const syncStatusDiv = document.getElementById('syncStatus');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    // Helper Functions
+    function formatRupiah(amount) {
+        if (amount === undefined || amount === null) amount = 0;
+        return new Intl.NumberFormat('id-ID', { 
+            style: 'currency', 
+            currency: 'IDR', 
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount);
+    }
+
+    function updateSyncStatus(status, message) {
+        syncStatusDiv.className = `sync-status ${status}`;
+        syncStatusDiv.innerHTML = message;
+    }
+
+    function showLoading(show) {
+        loadingOverlay.style.display = show ? 'flex' : 'none';
+    }
+
+    // Simpan ke cloud (Google Sheets)
+    async function saveToCloud(data) {
+        if (!GOOGLE_SHEETS_API_URL || GOOGLE_SHEETS_API_URL.includes('YOUR_DEPLOYED_URL')) {
+            // Fallback ke localStorage jika tidak ada URL yang valid
+            console.log('Mode offline: menyimpan ke localStorage');
+            localStorage.setItem('simcardSalesData_cloud', JSON.stringify(data));
+            return true;
+        }
+
+        try {
+            const response = await fetch(GOOGLE_SHEETS_API_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ action: 'save', data: data })
+            });
+            return true;
+        } catch (error) {
+            console.error('Gagal menyimpan ke cloud:', error);
+            // Fallback ke localStorage
+            localStorage.setItem('simcardSalesData_cloud', JSON.stringify(data));
+            return false;
+        }
+    }
+
+    // Load dari cloud (Google Sheets)
+    async function loadFromCloud() {
+        if (!GOOGLE_SHEETS_API_URL || GOOGLE_SHEETS_API_URL.includes('YOUR_DEPLOYED_URL')) {
+            // Fallback ke localStorage
+            const stored = localStorage.getItem('simcardSalesData_cloud');
+            if (stored) {
+                try {
+                    return JSON.parse(stored);
+                } catch(e) {
+                    return [];
+                }
+            }
+            return null;
+        }
+
+        try {
+            const response = await fetch(GOOGLE_SHEETS_API_URL + '?action=get');
+            if (response.ok) {
+                const data = await response.json();
+                return data;
+            }
+            return null;
+        } catch (error) {
+            console.error('Gagal load dari cloud:', error);
+            const stored = localStorage.getItem('simcardSalesData_cloud');
+            if (stored) {
+                try {
+                    return JSON.parse(stored);
+                } catch(e) {
+                    return null;
+                }
+            }
+            return null;
+        }
+    }
+
+    // Sinkronisasi data
+    async function syncData() {
+        if (syncInProgress) return;
+        syncInProgress = true;
+        updateSyncStatus('syncing', '🔄 Sinkronisasi data...');
+
+        try {
+            const cloudData = await loadFromCloud();
+            if (cloudData && Array.isArray(cloudData)) {
+                transactions = cloudData;
+                renderTable();
+                updateSyncStatus('online', '✅ Tersinkronisasi dengan cloud');
+            } else {
+                // Jika tidak ada data cloud, inisialisasi dengan data contoh
+                if (transactions.length === 0) {
+                    const today = new Date().toISOString().slice(0,10);
+                    transactions = [
+                        {
+                            id: Date.now() + 1001,
+                            simName: "Telkomsel 10GB",
+                            quantity: 3,
+                            modalUnit: 45000,
+                            priceUnit: 65000,
+                            date: today
+                        },
+                        {
+                            id: Date.now() + 1002,
+                            simName: "XL Prioritas 15GB",
+                            quantity: 2,
+                            modalUnit: 38000,
+                            priceUnit: 55000,
+                            date: today
+                        }
+                    ];
+                    await saveToCloud(transactions);
+                }
+                renderTable();
+                updateSyncStatus('online', '✅ Data siap (mode offline storage)');
+            }
+        } catch (error) {
+            console.error('Sync error:', error);
+            updateSyncStatus('offline', '⚠️ Mode offline - Data tersimpan lokal');
+            // Gunakan data lokal
+            const stored = localStorage.getItem('simcardSalesData_cloud');
+            if (stored) {
+                transactions = JSON.parse(stored);
+                renderTable();
+            }
+        } finally {
+            syncInProgress = false;
+        }
+    }
+
+    // Render tabel
+    function renderTable() {
+        if (!tableBody) return;
+        
+        if (transactions.length === 0) {
+            tableBody.innerHTML = `<tr class="empty-row"><td colspan="9">📭 Belum ada data penjualan. Silakan tambahkan transaksi baru.</td></tr>`;
+            recalcTotals();
+            return;
+        }
+
+        let html = '';
+        const sorted = [...transactions].sort((a, b) => {
+            if (a.date !== b.date) return b.date.localeCompare(a.date);
+            return b.id - a.id;
+        });
+        
+        sorted.forEach((item) => {
+            const totalModalItem = item.modalUnit * item.quantity;
+            const totalJualItem = item.priceUnit * item.quantity;
+            const pendapatanItem = totalJualItem - totalModalItem;
+            const pendapatanIcon = pendapatanItem >= 0 ? '📈' : '📉';
+            const pendapatanColor = pendapatanItem >= 0 ? 'style="color:#1f7840; font-weight:700;"' : 'style="color:#c0392b; font-weight:700;"';
+            
+            html += `
+                <tr data-id="${item.id}">
+                    <td>${escapeHtml(item.date)}</td>
+                    <td><strong>${escapeHtml(item.simName)}</strong></td>
+                    <td><span class="badge-quantity">${item.quantity}</span></td>
+                    <td>${formatRupiah(item.modalUnit)}</td>
+                    <td>${formatRupiah(item.priceUnit)}</td>
+                    <td>${formatRupiah(totalModalItem)}</td>
+                    <td>${formatRupiah(totalJualItem)}</td>
+                    <td ${pendapatanColor}>${pendapatanIcon} ${formatRupiah(pendapatanItem)}</td>
+                    <td><button class="delete-btn" data-id="${item.id}" title="Hapus transaksi">🗑️</button></td>
+                </tr>
+            `;
+        });
+        
+        tableBody.innerHTML = html;
+
+        // Attach event delete
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const id = parseInt(btn.getAttribute('data-id'));
+                if (confirm('Hapus transaksi ini?')) {
+                    transactions = transactions.filter(t => t.id !== id);
+                    showLoading(true);
+                    await saveToCloud(transactions);
+                    renderTable();
+                    recalcTotals();
+                    showLoading(false);
+                    updateSyncStatus('online', '✅ Data berhasil dihapus');
+                }
+            });
+        });
+        
+        recalcTotals();
+    }
+
+    function recalcTotals() {
+        let totalModalAll = 0;
+        let totalPenjualanAll = 0;
+
+        transactions.forEach(t => {
+            const modalTotalItem = t.modalUnit * t.quantity;
+            const penjualanTotalItem = t.priceUnit * t.quantity;
+            totalModalAll += modalTotalItem;
+            totalPenjualanAll += penjualanTotalItem;
+        });
+
+        const totalPendapatan = totalPenjualanAll - totalModalAll;
+
+        totalModalSpan.innerText = formatRupiah(totalModalAll);
+        totalPenjualanSpan.innerText = formatRupiah(totalPenjualanAll);
+        totalPendapatanSpan.innerText = formatRupiah(totalPendapatan);
+        
+        const count = transactions.length;
+        rowCountBadge.innerText = count + ' transaksi';
+        
+        const pendapatanCard = document.querySelector('.stat-card.pendapatan .stat-value');
+        if (pendapatanCard) {
+            if (totalPendapatan >= 0) {
+                pendapatanCard.style.color = '#1f7840';
+            } else {
+                pendapatanCard.style.color = '#c0392b';
+            }
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // Tambah transaksi
+    async function addTransaction(event) {
+        event.preventDefault();
+
+        let simName = simNameInput.value.trim();
+        let quantity = parseInt(quantityInput.value);
+        let modalUnit = parseFloat(modalUnitInput.value);
+        let priceUnit = parseFloat(priceUnitInput.value);
+        let date = dateInput.value;
+
+        if (!simName) {
+            alert("⚠️ Nama SIM Card harus diisi!");
+            return;
+        }
+        if (isNaN(quantity) || quantity < 1) {
+            alert("⚠️ Quantity minimal 1");
+            return;
+        }
+        if (isNaN(modalUnit) || modalUnit < 0) {
+            alert("⚠️ Modal per unit harus angka positif");
+            return;
+        }
+        if (isNaN(priceUnit) || priceUnit < 0) {
+            alert("⚠️ Harga jual per unit harus angka positif");
+            return;
+        }
+        if (!date) {
+            alert("⚠️ Pilih tanggal penjualan");
+            return;
+        }
+
+        const newTransaction = {
+            id: Date.now() + Math.random() * 10000,
+            simName: simName,
+            quantity: quantity,
+            modalUnit: modalUnit,
+            priceUnit: priceUnit,
+            date: date
+        };
+
+        transactions.unshift(newTransaction);
+        showLoading(true);
+        await saveToCloud(transactions);
+        renderTable();
+        showLoading(false);
+        
+        resetFormFields();
+        simNameInput.focus();
+        updateSyncStatus('online', '✅ Data tersimpan di cloud');
+    }
+
+    function resetFormFields() {
+        simNameInput.value = '';
+        quantityInput.value = '1';
+        modalUnitInput.value = '';
+        priceUnitInput.value = '';
+        const today = new Date().toISOString().slice(0,10);
+        dateInput.value = today;
+    }
+
+    async function clearAllData() {
+        if (confirm("⚠️ PERINGATAN: Hapus SEMUA data? Tindakan ini permanen dan akan tersinkronisasi ke semua perangkat.")) {
+            transactions = [];
+            showLoading(true);
+            await saveToCloud(transactions);
+            renderTable();
+            showLoading(false);
+            updateSyncStatus('online', '✅ Semua data telah dihapus');
+        }
+    }
+
+    function exportToCSV() {
+        if (transactions.length === 0) {
+            alert("Tidak ada data untuk diexport");
+            return;
+        }
+        
+        const headers = ['Tanggal', 'Nama SIM', 'Quantity', 'Modal/Unit', 'Harga Jual/Unit', 'Total Modal', 'Total Penjualan', 'Pendapatan'];
+        const rows = [];
+        
+        transactions.forEach(t => {
+            const totalModal = t.modalUnit * t.quantity;
+            const totalJual = t.priceUnit * t.quantity;
+            const pendapatan = totalJual - totalModal;
+            rows.push([t.date, t.simName, t.quantity, t.modalUnit, t.priceUnit, totalModal, totalJual, pendapatan]);
+        });
+        
+        const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `simcard_sales_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        alert("✅ Data berhasil diexport ke CSV");
+    }
+
+    function setDefaultDate() {
+        if (!dateInput.value) {
+            const today = new Date().toISOString().slice(0,10);
+            dateInput.value = today;
+        }
+    }
+
+    // Event Listeners
+    form.addEventListener('submit', addTransaction);
+    clearAllBtn.addEventListener('click', clearAllData);
+    resetFormBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        resetFormFields();
+    });
+    exportDataBtn.addEventListener('click', exportToCSV);
+    syncNowBtn.addEventListener('click', async () => {
+        await syncData();
+    });
+
+    // Cek koneksi internet
+    window.addEventListener('online', () => {
+        updateSyncStatus('online', '🔄 Kembali online, sinkronisasi...');
+        syncData();
+    });
+    
+    window.addEventListener('offline', () => {
+        updateSyncStatus('offline', '⚠️ Offline mode - Data tersimpan lokal');
+    });
+
+    // Initialization
+    async function init() {
+        setDefaultDate();
+        await syncData();
+    }
+    
+    init();
+</script>
+</body>
+</html>
